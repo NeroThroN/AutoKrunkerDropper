@@ -20,7 +20,22 @@ async function setResolution(page) {
   await page.keyboard.press('m');
 }
 
-async function readLoginData(browserConfig, configPath) {
+async function ReadConfigFile(configPath) {
+  const showBrowser = (process.argv.length > 2 && process.argv[2] == "browser")
+  
+  var browserConfig = {
+    headless: !showBrowser,
+    args: [
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu',
+      '--no-sandbox',
+      '--disable-setuid-sandbox'
+    ]
+  };
+
   const cookie = [{
     "domain": ".twitch.tv",
     "hostOnly": false,
@@ -41,16 +56,17 @@ async function readLoginData(browserConfig, configPath) {
 
       browserConfig.executablePath = configFile.exec;
       cookie[0].value = configFile.token;
-      return cookie;
+      return { cookie, browserConfig };
     } else {
       console.log('❌ No config file found!');
 
       let input = await askLogin();
+      input.banStreamers = new Array()
       writeFile(configPath, JSON.stringify(input), function(err) { if (err) console.log(err); });
 
       browserConfig.executablePath = input.exec;
       cookie[0].value = input.token;
-      return cookie;
+      return { cookie, browserConfig };
     }
   } catch (err) {
     console.log('🤬 Error: ', err);
@@ -141,4 +157,4 @@ async function shutDown() {
   process.exit();
 }
  
-export { setResolution, clickWhenExist, readLoginData, checkLogin, scroll, spawnBrowser, getRandomInt, queryOnWebsite, queryOnElement, shutDown }
+export { setResolution, clickWhenExist, ReadConfigFile, checkLogin, scroll, spawnBrowser, getRandomInt, queryOnWebsite, queryOnElement, shutDown }

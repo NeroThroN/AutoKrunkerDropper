@@ -15,21 +15,6 @@ import { Streamers, Streamer } from './modules/streamer.js';
 import * as Querys from './modules/querys.js';
 import * as Utils from './modules/utils.js';
 
-var run = true;
-const showBrowser = (process.argv.length > 2 && process.argv[2] == "browser")
-var browserConfig = {
-  headless: !showBrowser,
-  args: [
-    '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--no-zygote',
-    '--disable-gpu',
-    '--no-sandbox',
-    '--disable-setuid-sandbox'
-  ]
-};
-
 async function viewStreamer(page, streamers, firstRun) {
   if (!streamers.length) {
     console.log(`\n❔ No streamer available (Rescan in ${NoOneTime} minutes | ${dayjs().add(NoOneTime, 'minutes').format('HH:mm:ss')})\n`)
@@ -79,7 +64,8 @@ async function getAllStreamer(page) {
   const diff = streamers.banNames().filter(streamer => !configFile.banStreamers.includes(streamer))
   if (diff.length) {
     console.log('❌ Ban dropped streamer...');
-    writeFileSync(configPath, JSON.stringify(configFile.banStreamers.push(...diff)))
+    configFile.banStreamers.push(...diff)
+    writeFileSync(configPath, JSON.stringify(configFile))
   }
   streamers.setBan(configFile.banStreamers)
 
@@ -111,7 +97,7 @@ async function getDropsTime(page, streamers) {
 async function main() {
   console.clear();
   console.log("=========================");
-  const cookie = await Utils.readLoginData(browserConfig, configPath);
+  const { cookie, browserConfig } = await Utils.ReadConfigFile(configPath);
   var { page } = await Utils.spawnBrowser(browserConfig, cookie);
   console.log("=========================");
   await page.goto(startUrl, { "waitUntil": "networkidle0" });
@@ -119,7 +105,7 @@ async function main() {
   await Utils.checkLogin(page);
   console.log('🔭 Running watcher...');
 
-  var firstRun = true;
+  var run = true, firstRun = true;
   while (run) {
     try {
       const streamers = await getAllStreamer(page);
