@@ -1,5 +1,6 @@
-const inquirer = require('inquirer');
-exports.askLogin = () => {
+import inquirer from "inquirer"
+
+function askLogin () {
   const questions = [{
     name: 'token',
     type: 'password',
@@ -24,4 +25,6 @@ exports.askLogin = () => {
     }
   }];
   return inquirer.prompt(questions);
-};
+}
+
+export { askLogin }

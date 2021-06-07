@@ -1,8 +1,9 @@
 {
   "name": "krunker-twitch-drop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Automatic watching the twitch to get all Krunker drop",
   "main": "app.js",
+  "type": "module",
   "scripts": {
     "start": "node app",
     "debug": "node app browser"
