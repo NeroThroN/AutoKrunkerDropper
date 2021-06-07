@@ -1,0 +1,16 @@
+{
+  "name": "krunker-twitch-drop",
+  "version": "1.0.0",
+  "description": "Automatic watching the twitch to get all Krunker drop",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app"
+  },
+  "author": "Stephen Caille",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.3",
+    "dayjs": "^1.8.24",
+    "inquirer": "^7.1.0",
+    "puppeteer-core": "^2.1.1"
+  }
+}
