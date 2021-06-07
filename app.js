@@ -4,15 +4,10 @@ const cheerio = require('cheerio');
 var fs = require('fs');
 const inquirer = require('./input');
 
-var run = true;
-var firstRun = true;
-var streamers = null;
-var drops = null;
-
 // ========================================== CONFIG SECTION =================================================================
 
 const configPath = './config.json'
-const startUrl = 'https://www.twitch.tv/settings/profile'
+const startUrl = 'https://www.twitch.tv/settings/profile' // Just an url inside twitch but with fast opening speed
 const baseUrl = 'https://www.twitch.tv/';
 const streamersUrl = 'https://www.twitch.tv/directory/game/Krunker?tl=c2542d6d-cd10-4532-919b-3d19f30a768b';
 
@@ -22,6 +17,7 @@ const NoOneTime = 30;
 
 // ========================================== CONFIG SECTION =================================================================
 
+var run = true;
 const showBrowser = (process.argv.length > 2 && process.argv[2] == "browser")
 var browserConfig = {
   headless: !showBrowser,
@@ -46,53 +42,52 @@ const streamSettingsQuery = '[data-a-target="player-settings-button"]';
 const streamQualitySettingQuery = '[data-a-target="player-settings-menu-item-quality"]';
 const streamQualityQuery = 'input[data-a-target="tw-radio"]';
 
-async function viewStreamer(page) {
-  while (run) {
-    try {
-      await getAllStreamer(page);
+async function viewStreamer(page, streamers, firstRun) {
+  streamers.sort((streamerA, streamerB) => streamerB.progress - streamerA.progress)
+  streamersToWatch = streamers.filter(streamer => !streamer.ban && streamer.active)
 
-      if (!streamers.length) {
-        console.log('\n❔ No streamer available (Rescan in ' + NoOneTime + ' minutes | ' + dayjs().add(NoOneTime, 'minutes').format('HH:mm:ss') + ')\n')
-        await page.waitFor(NoOneTime * 60000);
-      } else {
-        let watch = selectStreamer()
-        var sleep = getRandomInt(minWatching, maxWatching) * 60000;
-
-        console.log('\n👀 Now watching streamer: ', baseUrl + watch);
-        await page.goto(baseUrl + watch, { "waitUntil": "networkidle2" });
-
-        await clickWhenExist(page, cookiePolicyQuery);
-        await clickWhenExist(page, matureContentQuery);
-        console.log('✅ Cookies & Mature content checked !') 
-
-        if (firstRun) {
-          console.log('🔧 Setting lowest possible resolution..');
-
-          await clickWhenExist(page, streamSettingsQuery);
-          await page.waitFor(streamQualitySettingQuery);
-
-          await clickWhenExist(page, streamQualitySettingQuery);
-          await page.waitFor(streamQualityQuery);
-
-          var resolution = await queryOnWebsite(page, streamQualityQuery);
-          resolution = resolution[resolution.length - 1].attribs.id;
-          await page.evaluate((resolution) => { document.getElementById(resolution).click();}, resolution);
-
-          await page.keyboard.press('m');
-          firstRun = false;
-        }
-
-        console.log(
-          '🕒 Start: ' + dayjs().format('HH:mm:ss') +
-          ' - End: ' + dayjs().add(sleep, 'millisecond').format('HH:mm:ss') +
-          ' | duration: ' + sleep / 60000 + ' minutes\n'
-        );
-        await page.waitFor(sleep);
-      }
-    } catch (e) {
-      console.log('🤬 Error: ', e);
-    }
+  if (!streamersToWatch.length) {
+    console.log('\n❔ No streamer available (Rescan in ' + NoOneTime + ' minutes | ' + dayjs().add(NoOneTime, 'minutes').format('HH:mm:ss') + ')\n')
+    return await page.waitFor(NoOneTime * 60000);;
   }
+
+  let streamer = streamersToWatch[0].streamer
+  var sleep = getRandomInt(minWatching, maxWatching) * 60000;
+
+  console.log('\n👀 Now watching streamer: ', baseUrl + streamer);
+  await page.goto(baseUrl + streamer, { "waitUntil": "networkidle2" });
+
+  await clickWhenExist(page, cookiePolicyQuery);
+  await clickWhenExist(page, matureContentQuery);
+  console.log('✅ Cookies & Mature content checked !') 
+
+  if (firstRun) {
+    setResolution(page)
+    firstRun = false;
+  }
+
+  console.log(
+    '🕒 Start: ' + dayjs().format('HH:mm:ss') +
+    ' - End: ' + dayjs().add(sleep, 'millisecond').format('HH:mm:ss') +
+    ' | duration: ' + sleep / 60000 + ' minutes\n'
+  );
+  await page.waitFor(sleep);
+}
+
+async function setResolution(page) {
+  console.log('🔧 Setting lowest possible resolution..');
+
+  await clickWhenExist(page, streamSettingsQuery);
+  await page.waitFor(streamQualitySettingQuery);
+
+  await clickWhenExist(page, streamQualitySettingQuery);
+  await page.waitFor(streamQualityQuery);
+
+  var resolution = await queryOnWebsite(page, streamQualityQuery);
+  resolution = resolution[resolution.length - 1].attribs.id;
+  await page.evaluate((resolution) => { document.getElementById(resolution).click();}, resolution);
+
+  await page.keyboard.press('m');
 }
 
 async function readLoginData() {
@@ -154,68 +149,60 @@ async function spawnBrowser(cookie) {
 
 async function getAllStreamer(page) {
   console.log("=========================");
+  const streamers = new Array();
+  await getDropsTime(page, streamers);
+
   await page.goto(streamersUrl, { "waitUntil": "networkidle0" });
   console.log('📡 Checking active streamers...');
   await scroll(page, 2);
   const jquery = await queryOnWebsite(page, channelsQuery);
-  streamers = new Array();
 
-  console.log('🧹 Filtering out html codes...');
+  // Merging active streamers
   for (var i = 0; i < jquery.length; i++) {
-    streamers[i] = jquery[i].attribs.href.split("/")[1];
-  }
-
-  console.log("=========================");
-  await getDropsTime(page);
-
-  for (var i = 0; i < drops.length; i++) {
-    if (streamers.includes(drops[i].streamer) && drops[i].progress < 100) {
-      console.log(drops[i])
+    const active = jquery[i].attribs.href.split("/")[1]
+    if (streamers.map(streamer => streamer.streamer).includes(active)) {
+      streamers.forEach((streamer) => streamer.active = active == streamer.streamer)
+    } else {
+      streamers.push({"streamer":active, "progress": 0, "active": true, "ban": false})
     }
   }
 
+  // Merging ban streamers
   let configFile = JSON.parse(fs.readFileSync(configPath, 'utf8'))
 
-  // Ban all finish streamer
-  finish = drops.filter(streamer => streamer.progress == 100).map(streamer => streamer.streamer)
-  diff = finish.filter(streamer => !configFile.banStreamers.includes(streamer))
+  const banned = streamers.filter(streamer => streamer.ban).map(streamer => streamer.streamer)
+  diff = banned.filter(streamer => !configFile.banStreamers.includes(streamer))
   if (diff.length) {
     console.log('❌ Ban dropped streamer...');
-    configFile.banStreamers.push(...diff)
+    configFile.banStreamers.push(...diff);
     fs.writeFileSync(configPath, JSON.stringify(configFile))
   }
+  streamers.forEach((streamer) => streamer.ban = configFile.banStreamers.includes(streamer.streamer))
 
-  // Remove Ban player
-  streamers = streamers.filter(streamer => !configFile.banStreamers.includes(streamer))
-  console.log("=========================");
-  return;
+  // Show streamers
+  if (streamers.filter(streamer => !streamer.ban && streamer.active).length > 0) {
+    console.log("=========================\n🎧 Streamers to watch:");
+    streamers.filter(streamer => !streamer.ban && streamer.active).forEach(streamer => console.log(" - " + streamer.streamer + ' (' + streamer.progress + ' %)'))
+    console.log("=========================");
+  }
+  return streamers;
 }
 
-async function getDropsTime(page) {
+async function getDropsTime(page, streamers) {
+  console.log('⌚ Get Drop time...');
   await page.goto('https://www.twitch.tv/drops/inventory', { "waitUntil": "networkidle0" });  
-  console.log('⏲ Get Drop time...');
   await scroll(page, 2);
   const jquery = await queryOnWebsite(page, dropsQuery);
 
   // Process all drops
-  drops = new Array()
   for (var i = 1; i < jquery.length; i++) {
-    try {
-      const nameElement = await queryOnElement(jquery[i], dropNameQuery)
-      const name = (nameElement.contents().first().text()).substring(1)
+    const nameElement = await queryOnElement(jquery[i], dropNameQuery)
+    const name = (nameElement.contents().first().text()).substring(1)
 
-      const timeElement = await queryOnElement(jquery[i], dropTimeQuery)
-      const time = timeElement[0].attribs.value
+    const timeElement = await queryOnElement(jquery[i], dropTimeQuery)
+    const time = timeElement[0].attribs.value
 
-      drops.push({"streamer":name, "progress": Number(time)})
-    } catch { }
-  }
-  drops.sort((streamerA, streamerB) => streamerB.progress - streamerA.progress);
-
-  // Add active streamer without drop progress
-  diff = streamers.filter(streamer => !drops.map(strmer => strmer.streamer).includes(streamer))
-  for (var i = 0; i < diff.length; i++) {
-    drops.push({"streamer":diff[i], "progress": 0})
+    streamers.push({"streamer":name, "progress": Number(time), "active": false, "ban": time == 100})
   }
 }
 
@@ -271,14 +258,6 @@ async function queryOnWebsite(page, query) {
   return jquery;
 }
 
-function selectStreamer() {
-  for (var i = 0; i < drops.length; i++) {
-    if (streamers.includes(drops[i].streamer) && drops[i].progress < 100) {
-      return drops[i].streamer
-    }
-  }
-}
-
 async function queryOnElement(element, query) {
   let $ = cheerio.load(element);
   const jquery = $(query);
@@ -292,18 +271,23 @@ async function shutDown() {
 }
 
 async function main() {
-  process.exit()
-
   console.clear();
   console.log("=========================");
   const cookie = await readLoginData();
-  var { browser, page } = await spawnBrowser(cookie);
+  var { page } = await spawnBrowser(cookie);
   console.log("=========================");
   await page.goto(startUrl, { "waitUntil": "networkidle0" });
   console.log('🔐 Checking login...');
   await checkLogin(page);
   console.log('🔭 Running watcher...');
-  await viewStreamer(page);
+
+  var firstRun = true;
+  while (run) {
+    try {
+      const streamers = await getAllStreamer(page);
+      await viewStreamer(page, streamers, firstRun);
+    } catch (e) { console.log('🤬 Error: ', e) }
+  }
 };
 
 main();
