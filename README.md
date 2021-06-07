@@ -27,7 +27,7 @@
 6. Install Chromium
 7. Usually the path to the Chromium executable is: C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe
 8. Install the dependencies with `npm install`
-9. Start the program with `npm start`
+9. Start the program with `npm start` or `npm run start`
 ### Linux
 1. Login to your twitch account
 2. Open inspector(F12 or Ctrl+Shift+I) on main site
@@ -37,7 +37,10 @@
 6. Install Chromium: [TUTORIAL 🤗](https://www.addictivetips.com/ubuntu-linux-tips/install-chromium-on-linux/)
 7. Locate Chromium executable: `whereis chromium` or `whereis chromium-browser`
 8. Install the dependencies with `npm install`
-9. Start the program with `npm start`
+9. Start the program with `npm start` or `npm run start`
+
+## Debug
+If you want to see what the program is doing, you can enable the browser with the command `npm run debug`
 
 ## Dependencies
 <p><img alt="GitHub package.json dependency version (subfolder of monorepo)" src="https://img.shields.io/github/package-json/dependency-version/NeroThroN/AutoKrunkerDropper/puppeteer-core"> <img alt="GitHub package.json dependency version (subfolder of monorepo)" src="https://img.shields.io/github/package-json/dependency-version/NeroThroN/AutoKrunkerDropper/cheerio"> <img alt="GitHub package.json dependency version (subfolder of monorepo)" src="https://img.shields.io/github/package-json/dependency-version/NeroThroN/AutoKrunkerDropper/inquirer"> <img alt="GitHub package.json dependency version (subfolder of monorepo)" src="https://img.shields.io/github/package-json/dependency-version/NeroThroN/AutoKrunkerDropper/dayjs"></p>
