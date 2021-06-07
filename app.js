@@ -6,7 +6,6 @@ const inquirer = require('./input');
 
 var run = true;
 var firstRun = true;
-var cookie = null;
 var streamers = null;
 var drops = null;
 
@@ -21,10 +20,9 @@ const minWatching = 10;
 const maxWatching = 15;
 const NoOneTime = 30;
 
-const showBrowser = false;
-
 // ========================================== CONFIG SECTION =================================================================
 
+const showBrowser = (process.argv.length > 2 && process.argv[2] == "browser")
 var browserConfig = {
   headless: !showBrowser,
   args: [
@@ -135,7 +133,7 @@ async function readLoginData() {
   }
 }
 
-async function spawnBrowser() {
+async function spawnBrowser(cookie) {
   console.log("=========================");
   console.log('📱 Launching browser...');
   var browser = await puppeteer.launch(browserConfig);
@@ -294,10 +292,12 @@ async function shutDown() {
 }
 
 async function main() {
+  process.exit()
+
   console.clear();
   console.log("=========================");
-  cookie = await readLoginData();
-  var { browser, page } = await spawnBrowser();
+  const cookie = await readLoginData();
+  var { browser, page } = await spawnBrowser(cookie);
   console.log("=========================");
   await page.goto(startUrl, { "waitUntil": "networkidle0" });
   console.log('🔐 Checking login...');
