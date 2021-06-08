@@ -7,6 +7,7 @@
 - 📜 Auto accept cookie policy
 - ⏳ Takes into account the progress of the different drops
 - 🔁 Automatically choose the streamer with the most progress
+- 🚩 Allow a list of streamers with a priority
 - 🤐 Unmuted stream
 - 🛠 Detect mature content-based stream and interact with it
 - ❌ Ban streamers who already have a drop claimed
