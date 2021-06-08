@@ -15,17 +15,17 @@ import { Streamers, Streamer } from './modules/streamer.js';
 import * as Querys from './modules/querys.js';
 import * as Utils from './modules/utils.js';
 
-async function viewStreamer(page, streamers, firstRun) {
-  if (!streamers.length) {
+async function viewStreamer(page, streamersPriority, streamers, firstRun) {
+  if (!streamersPriority.length && !streamers.length) {
     console.log(`\n❔ No streamer available (Rescan in ${NoOneTime} minutes | ${dayjs().add(NoOneTime, 'minutes').format('HH:mm:ss')})\n`)
     return await page.waitFor(NoOneTime * 60000);;
   }
 
-  let streamer = streamers[0].name
+  const streamer = streamersPriority.length ? streamersPriority[0] : streamers[0]
   var sleep = Utils.getRandomInt(minWatching, maxWatching) * 60000;
 
-  console.log(`\n👀 Now watching streamer: ${baseUrl + streamer}`);
-  await page.goto(baseUrl + streamer, { "waitUntil": "networkidle2" });
+  console.log(`\n👀 Now watching streamer: ${baseUrl + streamer.name} (${streamer.progress} %)`);
+  await page.goto(baseUrl + streamer.name, { "waitUntil": "networkidle2" });
 
   await Utils.clickWhenExist(page, Querys.cookiePolicyQuery);
   await Utils.clickWhenExist(page, Querys.matureContentQuery);
@@ -69,6 +69,9 @@ async function getAllStreamer(page) {
   }
   streamers.setBan(configFile.banStreamers)
 
+  // Merging priority streamers
+  streamers.setPriority(configFile.priority || new Array())
+
   // Show streamers
   console.log("=========================\n🎧 Active streamers to watch:");
   streamers.show()
@@ -109,7 +112,7 @@ async function main() {
   while (run) {
     try {
       const streamers = await getAllStreamer(page);
-      firstRun = await viewStreamer(page, streamers.toWatch(), firstRun);
+      firstRun = await viewStreamer(page, streamers.toWatchPriority(), streamers.toWatch(), firstRun);
     } catch (e) { console.log('🤬 Error: ', e) }
   }
 };

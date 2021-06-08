@@ -62,6 +62,7 @@ async function ReadConfigFile(configPath) {
 
       let input = await askLogin();
       input.banStreamers = new Array()
+      input.priority = new Array()
       writeFile(configPath, JSON.stringify(input), function(err) { if (err) console.log(err); });
 
       browserConfig.executablePath = input.exec;
